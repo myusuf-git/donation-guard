@@ -1,0 +1,12 @@
+{
+  "name": "myusuf-git/donation-guard",
+  "description": "Reconcile pending donations against Southeast Asian payment gateways (Midtrans, Xendit, Tripay) for WordPress.",
+  "type": "wordpress-plugin",
+  "license": "GPL-2.0-or-later",
+  "require": { "php": ">=7.4" },
+  "require-dev": { "phpunit/phpunit": "^9.6" },
+  "autoload": { "psr-4": { "DonationGuard\\": "src/" } },
+  "autoload-dev": { "psr-4": { "DonationGuard\\Tests\\": "tests/" } },
+  "scripts": { "test": "phpunit" },
+  "config": { "platform": { "php": "7.4.33" } }
+}

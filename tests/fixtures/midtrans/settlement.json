@@ -1,0 +1,1 @@
+{"status_code":"200","status_message":"Success, transaction is found","transaction_id":"0b3e6a2c-0000-4000-8000-000000000001","order_id":"DON-1001","gross_amount":"50000.00","currency":"IDR","payment_type":"bank_transfer","transaction_time":"2026-11-08 10:00:00","transaction_status":"settlement","fraud_status":"accept"}
