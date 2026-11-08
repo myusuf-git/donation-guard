@@ -98,7 +98,7 @@ final class Admin
             echo '<div class="notice notice-warning"><p>No gateway configured yet. Add at least one API key in Settings.</p></div>';
         }
         $sources = [];
-        foreach ([new \DonationGuard\Sources\WooCommerce(), new \DonationGuard\Sources\GiveWP()] as $src) {
+        foreach (Runner::sources() as $src) {
             $sources[] = $src->key() . ': ' . ($src->isAvailable() ? (empty($s['sources'][$src->key()]) ? 'disabled' : 'active') : 'not installed');
         }
         echo '<p>Sources: ' . self::badges($sources) . '</p>';
@@ -114,12 +114,21 @@ final class Admin
                 esc_html(wp_date('j M Y H:i T', $ts)), esc_html(human_time_diff($ts)), esc_html($last['triggered_by']),
                 $last['dry_run'] ? '<strong>dry-run</strong> (nothing changed)' : '<strong>live</strong> (changes applied)');
             echo '<table class="widefat striped" style="max-width:520px"><tbody>';
+            printf('<tr><th><strong>Need a human</strong> <span class="description">(amount mismatch, unresolved, failing callback URL)</span></th><td><strong>%d</strong></td></tr>', (int) $last['attention']);
             printf('<tr><th><strong>Donations checked</strong></th><td><strong>%d</strong></td></tr>', (int) $last['checked']);
-            printf('<tr><th><strong>Need a human</strong> <span class="description">(amount mismatch + unresolved)</span></th><td><strong>%d</strong></td></tr>', (int) $last['attention']);
             foreach ($last['counts'] as $k => $n) {
                 printf('<tr><th style="padding-left:24px">%s</th><td>%d</td></tr>', esc_html(self::label($k)), (int) $n);
             }
             echo '</tbody></table>';
+            if (!empty($last['callbacks'])) {
+                echo '<h3>Callback URLs</h3><table class="widefat striped" style="max-width:900px"><thead><tr><th>Gateway</th><th>URL</th><th>State</th><th>HTTP</th><th>Time</th><th>Message</th></tr></thead><tbody>';
+                foreach ($last['callbacks'] as $c) {
+                    $color = $c['state'] === 'ok' ? '#008a20' : ($c['state'] === 'warning' ? '#996800' : '#d63638');
+                    printf('<tr><td>%s</td><td><code>%s</code></td><td style="color:%s;font-weight:600">%s</td><td>%s</td><td>%ss</td><td>%s</td></tr>',
+                        esc_html($c['gateway']), esc_html($c['url']), esc_attr($color), esc_html($c['state']), esc_html((string) $c['http']), esc_html((string) $c['seconds']), esc_html($c['message']));
+                }
+                echo '</tbody></table>';
+            }
             $rows = AuditLog::forRun($last['run_id']);
             if ($rows) {
                 echo '<h3>Details</h3>';
@@ -153,8 +162,15 @@ final class Admin
         echo '</select></td></tr>';
         echo '<tr><th>Donation plugins</th><td>';
         printf('<label><input type="checkbox" name="%s[sources][woocommerce]" value="1"%s> WooCommerce</label><br>', esc_attr($n), checked($s['sources']['woocommerce'] ?? 0, 1, false));
-        printf('<label><input type="checkbox" name="%s[sources][givewp]" value="1"%s> GiveWP</label>', esc_attr($n), checked($s['sources']['givewp'] ?? 0, 1, false));
-        echo '</td></tr></table>';
+        printf('<label><input type="checkbox" name="%s[sources][givewp]" value="1"%s> GiveWP</label><br>', esc_attr($n), checked($s['sources']['givewp'] ?? 0, 1, false));
+        printf('<label><input type="checkbox" name="%s[sources][donasiaja]" value="1"%s> DonasiAja</label>', esc_attr($n), checked($s['sources']['donasiaja'] ?? 0, 1, false));
+        echo '<p class="description">DonasiAja has no "failed" status: expired payments are reported, not changed. Paid ones are confirmed through DonasiAja itself, so donors get the usual receipt.</p>';
+        echo '</td></tr>';
+        printf('<tr><th>Look back</th><td><input type="number" min="1" max="90" name="%s[lookback_days]" value="%d" class="small-text"> days</td></tr>', esc_attr($n), (int) $s['lookback_days']);
+        echo '</table>';
+
+        echo '<h2>Callback health check</h2><p>One line per callback (webhook) URL: <code>gateway | URL</code>. Each run sends a harmless unsigned test request and reports timeouts, server errors, redirects, firewall blocks and non-JSON answers.</p>';
+        printf('<textarea name="%s[callback_urls]" rows="6" class="large-text code" placeholder="tripay | https://example.org/callback_tripay/">%s</textarea>', esc_attr($n), esc_textarea($s['callback_urls']));
 
         echo '<h2>Gateways</h2><p>Keys are stored in the database and never shown again. For better security define them in <code>wp-config.php</code>, e.g. <code>define(\'DONATION_GUARD_MIDTRANS_SECRET\', \'...\');</code></p>';
         $help = [
@@ -234,6 +250,7 @@ final class Admin
             'would_mark_paid' => 'Would mark as paid', 'would_mark_failed' => 'Would mark as failed',
             'still_pending' => 'Still pending at gateway', 'amount_mismatch' => 'Amount mismatch',
             'unresolved' => 'Unresolved', 'skipped' => 'Skipped (unsupported gateway)',
+            'no_payment_code' => 'No payment code issued', 'expired_left_pending' => 'Not paid (expired), left as is',
         ];
         return $map[$action] ?? $action;
     }

@@ -2,7 +2,7 @@
 
 **Find donations stuck in "pending" and check their real status with Southeast Asian payment gateways.**
 
-A WordPress plugin for nonprofits and fundraising sites that use **WooCommerce** or **GiveWP** with **Midtrans**, **Xendit** or **Tripay**.
+A WordPress plugin for nonprofits and fundraising sites that use **WooCommerce**, **GiveWP** or **DonasiAja** with **Midtrans**, **Xendit** or **Tripay**.
 
 ![license](https://img.shields.io/badge/license-GPL--2.0--or--later-blue)
 ![php](https://img.shields.io/badge/php-7.4%2B-777bb4)
@@ -11,24 +11,28 @@ A WordPress plugin for nonprofits and fundraising sites that use **WooCommerce**
 
 ## The problem
 
-Payment webhooks get lost: the server was down, a firewall blocked the callback, the plugin was updated mid-campaign. The donor **has paid**, but the site still shows **pending**:
+Every donation site collects "pending" donations. During a busy campaign there can be hundreds, and nobody knows what they really are:
 
-- the donor gets no receipt and may donate twice, or lose trust;
-- campaign totals and progress bars are wrong;
-- reports to the board and to donors don't match the bank;
-- someone in finance spends hours comparing gateway dashboards with spreadsheets.
+- **expired**: the donor opened a QR code or virtual account and never paid (this is most of them);
+- **never created**: the gateway had an outage and no payment code was issued;
+- **paid but missed**: the payment went through, but the callback never reached the site (server down, firewall, timeout), or the site answered the callback in a format the gateway rejects, so the gateway keeps retrying.
 
-Donation Guard does that comparison for you, every hour, and keeps a log of every decision.
+Until someone checks, campaign totals, conversion numbers for the ads team and reports to the board are guesses, and a donor who did pay may get no receipt. Checking means comparing the gateway dashboard with the site, one invoice at a time.
+
+Donation Guard does that check for you, every hour. In most runs the answer is reassuring: "nothing is stuck, these 140 are simply unpaid". When something *is* stuck, it fixes it safely and tells you.
 
 ## What it does
 
 | Gateway says | Donation Guard does |
 |---|---|
-| Paid, same amount | Marks the donation as paid (WooCommerce `payment_complete`, GiveWP `publish`) |
+| Paid, same amount | Marks the donation as paid through the donation plugin itself, so the donor gets the usual receipt |
 | Paid, **different amount** | Changes nothing, flags it for a human |
-| Expired / failed / cancelled | Marks as failed (can be turned off) |
+| Expired / failed / cancelled | Marks as failed (can be turned off). On plugins without a failed status (DonasiAja) it only reports them, and stops re-checking them |
 | Still pending | Leaves it |
+| No payment code was ever issued | Reports it (checkout failed or gateway outage) |
 | Refunded, not found, API error | Changes nothing, flags it for a human |
+
+It also checks your **callback (webhook) URLs** on every run, the same way a gateway calls them, and warns about timeouts, server errors, redirects, firewall blocks and answers the gateway will reject (for example plain text where Tripay and Xendit expect JSON).
 
 Safety first:
 
@@ -42,7 +46,7 @@ Safety first:
 
 | | |
 |---|---|
-| Donation plugins | WooCommerce (incl. HPOS), GiveWP |
+| Donation plugins | WooCommerce (incl. HPOS), GiveWP, DonasiAja (tested with 2.2.x) |
 | Gateways | Midtrans (Core API status), Xendit (Invoices), Tripay |
 | Runs | WP-Cron (hourly / twice daily / daily), "Run now" button, WP-CLI |
 | Reports | Admin dashboard, email, JSON webhook (Slack, n8n, Telegram/WhatsApp bridges) |
@@ -64,6 +68,12 @@ define('DONATION_GUARD_MIDTRANS_SECRET', 'Mid-server-xxxx');
 define('DONATION_GUARD_XENDIT_SECRET',   'xnd_production_xxxx');
 define('DONATION_GUARD_TRIPAY_SECRET',   'xxxx');
 ```
+
+### DonasiAja
+
+DonasiAja is a popular Indonesian donation plugin sold outside wordpress.org. Donation Guard reads its donation table directly and needs no configuration: the gateway and reference are taken from each donation. Paid donations are confirmed through DonasiAja's own payment confirmation, so donors get the same WhatsApp/email receipt as with a manual confirmation, and the change is recorded with `process_by = donation-guard`. DonasiAja only knows "pending" and "paid", so expired payments are reported and left as they are.
+
+Donation Guard is not affiliated with DonasiAja and does not include any of its code.
 
 ### Which reference does it use?
 
@@ -93,6 +103,8 @@ wp donation-guard log --limit=20
 | `donation_guard_detect_gateway` (filter) | Map a custom payment method id to `midtrans` / `xendit` / `tripay` |
 | `donation_guard_woocommerce_donation` (filter) | Adjust the reference / amount read from an order |
 | `donation_guard_givewp_donation` (filter) | Same for GiveWP |
+| `donation_guard_donasiaja_donation` (filter) | Same for DonasiAja |
+| `donation_guard_donasiaja_mark_paid` (filter) | Replace how a DonasiAja donation is confirmed |
 | `donation_guard_gateway_base_url` (filter) | Point a gateway to a proxy or a mock server |
 | `donation_guard_after_run` (action) | Receive the run summary |
 

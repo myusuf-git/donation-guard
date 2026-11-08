@@ -34,6 +34,11 @@ final class Notifier
         foreach ($s['counts'] as $action => $n) {
             $lines[] = sprintf('- %s: %d', $action, $n);
         }
+        foreach ($s['callbacks'] ?? [] as $c) {
+            if ($c['state'] !== 'ok') {
+                $lines[] = sprintf('- callback %s: %s (%s)', $c['gateway'], $c['state'], $c['message']);
+            }
+        }
         $lines[] = '';
         $lines[] = 'Details: ' . admin_url('tools.php?page=donation-guard');
         return implode("\n", $lines);

@@ -12,6 +12,8 @@ final class Outcome
     public const MISMATCH      = 'amount_mismatch';
     public const UNRESOLVED    = 'unresolved';
     public const SKIPPED       = 'skipped';
+    public const NO_INVOICE    = 'no_payment_code';      // gateway never issued a payment code
+    public const EXPIRED_KEPT  = 'expired_left_pending'; // expired at gateway, source has no "failed" status
 
     /** @var Donation */ public $donation;
     /** @var string */ public $action;

@@ -18,11 +18,11 @@ final class WooCommerce implements SourceInterface
         return function_exists('wc_get_orders');
     }
 
-    public function findPending(int $olderThanMinutes, int $limit): array
+    public function findPending(int $olderThanMinutes, int $limit, int $lookbackDays = 7): array
     {
         $orders = wc_get_orders([
             'status'       => ['pending'],
-            'date_created' => '<' . (time() - $olderThanMinutes * 60),
+            'date_created' => (time() - $lookbackDays * 86400) . '...' . (time() - $olderThanMinutes * 60),
             'limit'        => $limit,
             'orderby'      => 'date',
             'order'        => 'ASC',
@@ -52,6 +52,11 @@ final class WooCommerce implements SourceInterface
             $order->add_order_note($note);
             $order->payment_complete($d->reference);
         }
+    }
+
+    public function canMarkFailed(): bool
+    {
+        return true;
     }
 
     public function markFailed(Donation $d, string $note): void

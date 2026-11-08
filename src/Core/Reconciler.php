@@ -34,10 +34,22 @@ final class Reconciler
         return $this;
     }
 
-    public function run(SourceInterface $source, int $olderThanMinutes, int $limit, bool $dryRun, ?string $now = null): Report
+    /**
+     * @param string[] $skipIds donation ids already known to be final at the gateway
+     *                          (e.g. expired on a plugin that cannot mark them failed)
+     */
+    public function run(SourceInterface $source, int $olderThanMinutes, int $limit, bool $dryRun, ?string $now = null, array $skipIds = [], int $lookbackDays = 7): Report
     {
         $report = new Report($dryRun, $now ?? gmdate('c'));
-        foreach ($source->findPending($olderThanMinutes, $limit) as $donation) {
+        $skip   = array_flip(array_map('strval', $skipIds));
+        $done   = 0;
+        foreach ($source->findPending($olderThanMinutes, $limit + count($skip), $lookbackDays) as $donation) {
+            if (isset($skip[$donation->id])) {
+                continue;
+            }
+            if ($done++ >= $limit) {
+                break;
+            }
             $report->add($this->reconcileOne($source, $donation, $dryRun));
         }
         return $report;
@@ -52,7 +64,7 @@ final class Reconciler
                 : 'Gateway "' . $d->gateway . '" is not enabled');
         }
         if ($d->reference === '') {
-            return new Outcome($d, Outcome::UNRESOLVED, null, 'Donation has no gateway reference');
+            return new Outcome($d, Outcome::NO_INVOICE, null, 'No payment code was issued by the gateway (checkout failed or gateway outage)');
         }
 
         try {
@@ -81,6 +93,9 @@ final class Reconciler
 
             case Status::EXPIRED:
             case Status::FAILED:
+                if (!$source->canMarkFailed()) {
+                    return new Outcome($d, Outcome::EXPIRED_KEPT, $status, 'Not paid at gateway (' . $status->raw . '); the donation plugin has no failed status');
+                }
                 if (!$this->markExpiredAsFailed) {
                     return new Outcome($d, Outcome::STILL_PENDING, $status, 'Expired/failed at gateway; auto-fail disabled');
                 }

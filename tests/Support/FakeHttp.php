@@ -30,4 +30,9 @@ final class FakeHttp implements ClientInterface
         }
         throw new \RuntimeException('No fake route for ' . $url);
     }
+
+    public function post(string $url, string $body, array $headers = [], int $timeout = 15): Response
+    {
+        throw new \LogicException('not used');
+    }
 }

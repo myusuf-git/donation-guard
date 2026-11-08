@@ -62,10 +62,10 @@ final class ReconcilerTest extends TestCase
             '6' => Outcome::UNRESOLVED,
             '7' => Outcome::UNRESOLVED,
             '8' => Outcome::SKIPPED,
-            '9' => Outcome::UNRESOLVED,
+            '9' => Outcome::NO_INVOICE,
         ], $this->actions($r));
         $this->assertSame(['1' => 'paid', '4' => 'failed'], $src->changes);
-        $this->assertCount(5, $r->needsAttention());
+        $this->assertCount(4, $r->needsAttention());
         $this->assertSame(9, $r->checked());
     }
 
@@ -96,6 +96,21 @@ final class ReconcilerTest extends TestCase
         $this->assertStringContainsString('db locked', $r->outcomes[0]->note);
         $this->assertSame(['4' => 'failed'], $src->changes);
         $this->assertSame(9, $r->checked());
+    }
+
+    public function testSourceWithoutFailedStatusOnlyReportsExpired(): void
+    {
+        $src = $this->source();
+        $src->canFail = false;
+        $r = $this->reconciler()->run($src, 30, 100, false);
+        $this->assertSame(Outcome::EXPIRED_KEPT, $this->actions($r)['4']);
+        $this->assertSame(['1' => 'paid'], $src->changes);
+    }
+
+    public function testSkipIdsAreNotCheckedAndDoNotCountTowardsLimit(): void
+    {
+        $r = $this->reconciler()->run($this->source(), 30, 2, true, null, ['1', '2']);
+        $this->assertSame([3, 4], array_keys($this->actions($r)));
     }
 
     public function testLimit(): void

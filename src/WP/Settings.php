@@ -15,7 +15,9 @@ final class Settings
             'limit'          => 50,
             'auto_fail'      => 1,
             'schedule'       => 'hourly',
-            'sources'        => ['woocommerce' => 1, 'givewp' => 1],
+            'sources'        => ['woocommerce' => 1, 'givewp' => 1, 'donasiaja' => 1],
+            'lookback_days'  => 7,
+            'callback_urls'  => '',
             'report_email'   => '',
             'webhook_url'    => '',
             'notify'         => 'changes', // changes | always | never
@@ -51,6 +53,19 @@ final class Settings
         return (string) self::get('gw_' . $gateway . '_secret');
     }
 
+    /** @return array<int,array{0:string,1:string}> [gateway, url] */
+    public static function callbackUrls(): array
+    {
+        $out = [];
+        foreach (preg_split('/\R/', (string) self::get('callback_urls')) as $line) {
+            $p = array_map('trim', explode('|', $line, 2));
+            if (count($p) === 2 && $p[1] !== '') {
+                $out[] = [$p[0], $p[1]];
+            }
+        }
+        return $out;
+    }
+
     public static function secretFromConstant(string $gateway): bool
     {
         return defined('DONATION_GUARD_' . strtoupper($gateway) . '_SECRET');
@@ -70,7 +85,17 @@ final class Settings
         $out['sources']    = [
             'woocommerce' => empty($in['sources']['woocommerce']) ? 0 : 1,
             'givewp'      => empty($in['sources']['givewp']) ? 0 : 1,
+            'donasiaja'   => empty($in['sources']['donasiaja']) ? 0 : 1,
         ];
+        $out['lookback_days'] = max(1, min(90, (int) ($in['lookback_days'] ?? 7)));
+        $urls = [];
+        foreach (preg_split('/\R/', (string) ($in['callback_urls'] ?? '')) as $line) {
+            $parts = array_map('trim', explode('|', $line, 2));
+            if (count($parts) === 2 && isset(self::GATEWAYS[strtolower($parts[0])]) && wp_http_validate_url($parts[1])) {
+                $urls[] = strtolower($parts[0]) . ' | ' . esc_url_raw($parts[1]);
+            }
+        }
+        $out['callback_urls'] = implode("\n", $urls);
         $out['report_email'] = sanitize_email($in['report_email'] ?? '');
         $out['webhook_url']  = esc_url_raw($in['webhook_url'] ?? '');
         foreach (array_keys(self::GATEWAYS) as $g) {

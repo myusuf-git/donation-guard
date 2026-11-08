@@ -3,7 +3,7 @@
  * Plugin Name:       Donation Guard
  * Plugin URI:        https://github.com/myusuf-git/donation-guard
  * Description:       Finds donations stuck in "pending" and checks their real status with Midtrans, Xendit and Tripay. Dry-run by default.
- * Version:           0.1.0
+ * Version:           0.2.0
  * Requires at least: 6.0
  * Requires PHP:      7.4
  * Author:            Donation Guard contributors
@@ -16,7 +16,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-define('DONATION_GUARD_VERSION', '0.1.0');
+define('DONATION_GUARD_VERSION', '0.2.0');
 define('DONATION_GUARD_FILE', __FILE__);
 define('DONATION_GUARD_DIR', __DIR__);
 

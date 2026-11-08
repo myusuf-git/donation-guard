@@ -1,10 +1,14 @@
 # Donation Guard (Bahasa Indonesia)
 
-Plugin WordPress untuk mengecek donasi yang masih **pending** ke payment gateway (Midtrans, Xendit, Tripay), lalu memperbaiki statusnya.
+Plugin WordPress untuk mengecek donasi yang masih **pending** ke payment gateway (Midtrans, Xendit, Tripay), lalu memperbaiki statusnya. Mendukung **WooCommerce, GiveWP, dan DonasiAja**.
 
 ## Kenapa perlu?
 
-Notifikasi (webhook) dari gateway kadang gagal masuk. Donatur sudah bayar, tapi di web masih pending. Akibatnya donatur tidak dapat kuitansi, total kampanye salah, dan tim keuangan harus mencocokkan data secara manual.
+Donasi pending menumpuk, apalagi saat kampanye ramai. Sebagian besar sebenarnya **kedaluwarsa** (tidak jadi bayar), sebagian **kode bayarnya gagal dibuat** karena gangguan gateway, dan sesekali ada yang **sudah lunas tapi callback-nya tidak masuk**. Tanpa dicek, angka kampanye, laporan, dan data konversi iklan jadi tebakan.
+
+Donation Guard mengecek semuanya tiap jam, dan juga memeriksa kesehatan URL callback.
+
+**DonasiAja:** donasi lunas dikonfirmasi lewat fungsi DonasiAja sendiri, jadi donatur tetap dapat kuitansi WA/email. Donasi kedaluwarsa hanya dilaporkan, tidak diubah (DonasiAja tidak punya status gagal).
 
 ## Cara pakai singkat
 
