@@ -7,6 +7,8 @@ A WordPress plugin for nonprofits and fundraising sites that use **WooCommerce**
 ![license](https://img.shields.io/badge/license-GPL--2.0--or--later-blue)
 ![php](https://img.shields.io/badge/php-7.4%2B-777bb4)
 
+![Donation Guard demo: pending donations checked against Midtrans, Xendit and Tripay, then fixed](docs/demo.gif)
+
 ## The problem
 
 Payment webhooks get lost: the server was down, a firewall blocked the callback, the plugin was updated mid-campaign. The donor **has paid**, but the site still shows **pending**:
